@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ProjectTasksOptions">
+    <TaskOptions isEnabled="true">
+      <option name="arguments" value="$ProjectFileDir$/front/src/Main.elm" />
+      <option name="checkSyntaxErrors" value="false" />
+      <option name="description" value="" />
+      <option name="exitCodeBehavior" value="ALWAYS" />
+      <option name="fileExtension" value="elm" />
+      <option name="immediateSync" value="true" />
+      <option name="name" value="Elm Compiler" />
+      <option name="output" value="" />
+      <option name="outputFilters">
+        <array />
+      </option>
+      <option name="outputFromStdout" value="false" />
+      <option name="passParentEnvs" value="true" />
+      <option name="program" value="$USER_HOME$/.cabal/bin/elm-make" />
+      <option name="scopeName" value="src" />
+      <option name="trackOnlyRoot" value="false" />
+      <option name="workingDir" value="$ProjectFileDir$/front" />
+      <envs />
+    </TaskOptions>
+  </component>
+</project>
