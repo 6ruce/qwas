@@ -57,12 +57,12 @@ centeredDiv content =
             [h1 [] <| [text (lc "Qwas")], content]]
 
 view : LoginFormModel -> Signal.Address LoginAction -> Html
-view model mailboxAddress = centeredDiv <| loginForm mailboxAddress model
+view model mailboxAddress = centeredDiv <| createLoginForm mailboxAddress model
 
 update : LoginAction -> LoginFormModel -> UpdateResult LoginFormModel RedirectAfterLogin
 update action modelBefore =
     case action of
-        Submit                  -> confirmForm modelBefore
+        Submit                  -> confirmLoginForm modelBefore
         UpdateLogin    login    -> Model { modelBefore | login    <- login }
         UpdatePassword password -> Model { modelBefore | password <- password }
 
@@ -70,8 +70,8 @@ update action modelBefore =
 sendLoginAction : Signal.Address LoginAction -> (a -> LoginAction) -> a -> Signal.Message
 sendLoginAction address action value = Signal.message address (action value)
 
-loginForm : Signal.Address LoginAction -> LoginFormModel -> Html
-loginForm mailboxAddress model =
+createLoginForm : Signal.Address LoginAction -> LoginFormModel -> Html
+createLoginForm mailboxAddress model =
     let
         errors          = model.validationErrors
         isLoginValid    = List.isEmpty errors.login
@@ -85,8 +85,8 @@ loginForm mailboxAddress model =
             , Buttons.simpleButton       (lc "Sign In") [Ev.onClick mailboxAddress Submit]
             ]
 
-confirmForm : LoginFormModel -> UpdateResult LoginFormModel RedirectAfterLogin
-confirmForm model =
+confirmLoginForm : LoginFormModel -> UpdateResult LoginFormModel RedirectAfterLogin
+confirmLoginForm model =
     let loginErrors    = checkLogin    model.login
         passwordErrors = checkPassword model.password
         noErrors       = (List.isEmpty loginErrors) && (List.isEmpty passwordErrors)
