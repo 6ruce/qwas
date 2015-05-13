@@ -15,8 +15,12 @@ import Html.Attributes as Attr
 import Html.Events     as Ev
 
 import Http
+import Json.Decode
+import Task exposing (andThen)
 
 import Common.Tuple as Tuple
+import Common.Bools as Bools
+
 import Localization exposing (..)
 import Router       exposing (..)
 import Response
@@ -89,7 +93,7 @@ confirmLoginForm : LoginFormModel -> UpdateResult LoginFormModel RedirectAfterLo
 confirmLoginForm model =
     let loginErrors    = checkLogin    model.login
         passwordErrors = checkPassword model.password
-        noErrors       = (List.isEmpty loginErrors) && (List.isEmpty passwordErrors)
+        noErrors       = Tuple.all List.isEmpty (passwordErrors, loginErrors)
     in
         if | noErrors  -> Action RedirectAfterLogin
            | otherwise ->
@@ -97,6 +101,26 @@ confirmLoginForm model =
                     password         <- "",
                     validationErrors <- { login = loginErrors, password = passwordErrors }
                 }
+
+confirmLoginForm1 : LoginFormModel -> Task.Task Http.Error (UpdateResult LoginFormModel RedirectAfterLogin)
+confirmLoginForm1 model =
+    let loginErrors       = checkLogin    model.login
+        passwordErrors    = checkPassword model.password
+        noErrors          = Tuple.all List.isEmpty (passwordErrors, loginErrors)
+    in
+        if | noErrors  -> checkAuthData model.login model.password `andThen` Action RedirectAfterLogin
+           | otherwise -> Task.succeed <|
+                Model { model |
+                  password         <- "",
+                  validationErrors <- { login = loginErrors, password = passwordErrors }
+                }
+
+checkAuthData : String -> String -> Task.Task Http.Error Bool
+checkAuthData login password =
+    Http.get (Response.resultDecoder <| Json.Decode.null "") "http://localhost:3000/auth"
+        `andThen` (\result -> Task.succeed result.success)
+
+resolveCheckAuthResult : Task.Task Http.Error Bool -> Task.Task Http.Error (UpdateResult LoginFormModel RedirectAfterLogin)
 
 checkLogin : String -> List String
 checkLogin login =

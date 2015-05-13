@@ -81,9 +81,8 @@ getData action =
         None               -> Task.succeed ""
         SignIn loginAction ->
             case loginAction of
-                VLogin.Submit -> Http.getString "http://localhost:3000/"
+                VLogin.Submit -> Http.getString "http://localhost:3000/auth"
                 _             -> Task.succeed ""
-
 
 port httpGetData : Signal (Task.Task Http.Error String)
 port httpGetData =

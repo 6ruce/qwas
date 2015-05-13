@@ -792,20 +792,31 @@ Elm.Common.Tuple.make = function (_elm) {
    _N = Elm.Native,
    _U = _N.Utils.make(_elm),
    _L = _N.List.make(_elm),
-   $moduleName = "Common.Tuple";
-   var map = F2(function (f,_v0) {
+   $moduleName = "Common.Tuple",
+   $Basics = Elm.Basics.make(_elm);
+   var all = F2(function (f,_v0) {
       return function () {
          switch (_v0.ctor)
          {case "_Tuple2":
-            return {ctor: "_Tuple2"
-                   ,_0: f(_v0._0)
-                   ,_1: f(_v0._1)};}
+            return f(_v0._0) && f(_v0._1);}
          _U.badCase($moduleName,
-         "on line 4, column 19 to 29");
+         "on line 10, column 18 to 30");
+      }();
+   });
+   var map = F2(function (f,_v4) {
+      return function () {
+         switch (_v4.ctor)
+         {case "_Tuple2":
+            return {ctor: "_Tuple2"
+                   ,_0: f(_v4._0)
+                   ,_1: f(_v4._1)};}
+         _U.badCase($moduleName,
+         "on line 7, column 19 to 29");
       }();
    });
    _elm.Common.Tuple.values = {_op: _op
-                              ,map: map};
+                              ,map: map
+                              ,all: all};
    return _elm.Common.Tuple.values;
 };
 Elm.Debug = Elm.Debug || {};
@@ -12935,7 +12946,7 @@ Elm.Qwas.make = function (_elm) {
             return function () {
                  switch (action._0.ctor)
                  {case "Submit":
-                    return $Http.getString("http://localhost:3000/");}
+                    return $Http.getString("http://localhost:3000/auth");}
                  return $Task.succeed("");
               }();}
          _U.badCase($moduleName,
@@ -13047,7 +13058,8 @@ Elm.Response.make = function (_elm) {
    _N = Elm.Native,
    _U = _N.Utils.make(_elm),
    _L = _N.List.make(_elm),
-   $moduleName = "Response";
+   $moduleName = "Response",
+   $Json$Decode = Elm.Json.Decode.make(_elm);
    var Result = F3(function (a,
    b,
    c) {
@@ -13056,7 +13068,21 @@ Elm.Response.make = function (_elm) {
              ,errors: c
              ,success: a};
    });
+   var resultDecoder = function (dataDecoder) {
+      return A4($Json$Decode.object3,
+      Result,
+      A2($Json$Decode._op[":="],
+      "success",
+      $Json$Decode.bool),
+      A2($Json$Decode._op[":="],
+      "data",
+      dataDecoder),
+      A2($Json$Decode._op[":="],
+      "errors",
+      $Json$Decode.list($Json$Decode.string)));
+   };
    _elm.Response.values = {_op: _op
+                          ,resultDecoder: resultDecoder
                           ,Result: Result};
    return _elm.Response.values;
 };
@@ -14041,13 +14067,18 @@ Elm.Views.Login.make = function (_elm) {
    _L = _N.List.make(_elm),
    $moduleName = "Views.Login",
    $Basics = Elm.Basics.make(_elm),
+   $Common$Tuple = Elm.Common.Tuple.make(_elm),
    $Html = Elm.Html.make(_elm),
    $Html$Attributes = Elm.Html.Attributes.make(_elm),
    $Html$Events = Elm.Html.Events.make(_elm),
+   $Http = Elm.Http.make(_elm),
+   $Json$Decode = Elm.Json.Decode.make(_elm),
    $List = Elm.List.make(_elm),
    $Localization = Elm.Localization.make(_elm),
+   $Response = Elm.Response.make(_elm),
    $Router = Elm.Router.make(_elm),
    $Signal = Elm.Signal.make(_elm),
+   $Task = Elm.Task.make(_elm),
    $Widgets$Buttons = Elm.Widgets.Buttons.make(_elm),
    $Widgets$Fields = Elm.Widgets.Fields.make(_elm);
    var checkPassword = function (password) {
@@ -14058,6 +14089,16 @@ Elm.Views.Login.make = function (_elm) {
       return _U.eq(login,
       "") ? _L.fromArray([$Localization.lc("Login is empty")]) : _L.fromArray([]);
    };
+   var checkAuthData = F2(function (login,
+   password) {
+      return A2($Task.andThen,
+      A2($Http.get,
+      $Response.resultDecoder($Json$Decode.$null("")),
+      "http://localhost:3000/auth"),
+      function (result) {
+         return $Task.succeed(result.success);
+      });
+   });
    var sendLoginAction = F3(function (address,
    action,
    value) {
@@ -14103,7 +14144,7 @@ Elm.Views.Login.make = function (_elm) {
              ,_0: a};
    };
    var Submit = {ctor: "Submit"};
-   var loginForm = F2(function (mailboxAddress,
+   var createLoginForm = F2(function (mailboxAddress,
    model) {
       return function () {
          var sendAction = sendLoginAction(mailboxAddress);
@@ -14133,16 +14174,20 @@ Elm.Views.Login.make = function (_elm) {
    });
    var view = F2(function (model,
    mailboxAddress) {
-      return centeredDiv(A2(loginForm,
+      return centeredDiv(A2(createLoginForm,
       mailboxAddress,
       model));
    });
    var RedirectAfterLogin = {ctor: "RedirectAfterLogin"};
-   var confirmForm = function (model) {
+   var confirmLoginForm = function (model) {
       return function () {
          var passwordErrors = checkPassword(model.password);
          var loginErrors = checkLogin(model.login);
-         var noErrors = $List.isEmpty(loginErrors) && $List.isEmpty(passwordErrors);
+         var noErrors = A2($Common$Tuple.all,
+         $List.isEmpty,
+         {ctor: "_Tuple2"
+         ,_0: passwordErrors
+         ,_1: loginErrors});
          return noErrors ? $Router.Action(RedirectAfterLogin) : $Router.Model(_U.replace([["password"
                                                                                           ,""]
                                                                                          ,["validationErrors"
@@ -14157,7 +14202,7 @@ Elm.Views.Login.make = function (_elm) {
       return function () {
          switch (action.ctor)
          {case "Submit":
-            return confirmForm(modelBefore);
+            return confirmLoginForm(modelBefore);
             case "UpdateLogin":
             return $Router.Model(_U.replace([["login"
                                              ,action._0]],
@@ -14167,9 +14212,27 @@ Elm.Views.Login.make = function (_elm) {
                                              ,action._0]],
               modelBefore));}
          _U.badCase($moduleName,
-         "between lines 64 and 67");
+         "between lines 66 and 69");
       }();
    });
+   var confirmLoginForm1 = function (model) {
+      return function () {
+         var passwordErrors = checkPassword(model.password);
+         var loginErrors = checkLogin(model.login);
+         var noErrors = A2($Common$Tuple.all,
+         $List.isEmpty,
+         {ctor: "_Tuple2"
+         ,_0: passwordErrors
+         ,_1: loginErrors});
+         return noErrors ? $Task.succeed($Router.Action(RedirectAfterLogin)) : $Task.succeed($Router.Model(_U.replace([["password"
+                                                                                                                       ,""]
+                                                                                                                      ,["validationErrors"
+                                                                                                                       ,{_: {}
+                                                                                                                        ,login: loginErrors
+                                                                                                                        ,password: passwordErrors}]],
+         model)));
+      }();
+   };
    _elm.Views.Login.values = {_op: _op
                              ,emptyModel: emptyModel
                              ,view: view
