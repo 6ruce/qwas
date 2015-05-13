@@ -1,4 +1,9 @@
-module Validators.Text where
+module Validators.Text 
+    ( notEmpty
+    ) where
 
-notEmpty : String -> Result ()
-notEmpty text = text
+import Result exposing (Result)
+
+notEmpty : String -> String -> Result String String
+notEmpty message value =
+    if (value == "") then Result.Err message else Result.Ok value

@@ -23,8 +23,9 @@ type Page
 type alias Model =
     {
     -- General application state
-      pageTitle   : String
-    , currentPage : Page
+      pageTitle     : String
+    , currentPage   : Page
+    , authenticated : Bool
 
     -- Login page state
     , loginForm : LoginFormModel
@@ -33,9 +34,12 @@ type alias Model =
 
 emptyModel : Model
 emptyModel =
-    { pageTitle   = lc "Qwas"
-    , currentPage = Login
-    , loginForm   = VLogin.emptyModel
+    { pageTitle     = lc "Qwas"
+    , currentPage   = Login
+    , authenticated = True
+
+    -- Modules empty models
+    , loginForm     = VLogin.emptyModel
     }
 
 -- View Model Update
@@ -58,8 +62,8 @@ update action model =
         SignIn loginAction ->
             let updateResult = VLogin.update loginAction model.loginForm
             in case updateResult of
-                Action (VLogin.RedirectAfterLogin) -> { model | currentPage <- MainPage }
-                Model  loginModel                  -> { model | loginForm   <- loginModel }
+                Action (VLogin.AuthIsSuccess) -> { model | authenticated <- True, currentPage <- MainPage }
+                Model  loginModel             -> { model | loginForm     <- loginModel }
         _ -> model
 
 -- Mailboxes
@@ -74,7 +78,6 @@ loginAddress =
     Signal.forwardTo mainMailbox.address SignIn
 
 -- Ports
-
 getData : Action -> Task.Task Http.Error String
 getData action =
     case action of
