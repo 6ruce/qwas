@@ -1,5 +1,5 @@
 module Views.Login
-    ( RedirectAfterLogin (..)
+    ( AuthIsSuccess (AuthIsSuccess)
     , LoginAction (..) --remove (..) after debug
     , LoginFormModel
     , emptyModel
@@ -19,7 +19,6 @@ import Json.Decode
 import Task exposing (andThen)
 
 import Common.Tuple as Tuple
-import Common.Bools as Bools
 
 import Localization exposing (..)
 import Router       exposing (..)
@@ -92,42 +91,30 @@ createLoginForm mailboxAddress model =
             , Buttons.simpleButton       (lc "Sign In") [Ev.onClick mailboxAddress Submit]
             ]
 
-confirmLoginForm : LoginFormModel -> UpdateResult LoginFormModel AuthIsSuccess
+confirmLoginForm : LoginFormModel -> UpdateTask LoginFormModel AuthIsSuccess
 confirmLoginForm model =
-    let loginErrors    = checkLogin    model.login
-        passwordErrors = checkPassword model.password
-        noErrors       = Tuple.all List.isEmpty (passwordErrors, loginErrors)
-    in
-        if | noErrors  -> Action AuthIsSuccess
-           | otherwise ->
-                Model { model |
-                    password         <- "",
-                    validationErrors <- { login = loginErrors, password = passwordErrors }
-                }
-
-confirmLoginForm1 : LoginFormModel -> UpdateTask LoginFormModel AuthIsSuccess
-confirmLoginForm1 model =
     let loginErrors       = Validate.toErrorList <| Validate.notEmpty (lc "Login is empty")    model.login
         passwordErrors    = Validate.toErrorList <| Validate.notEmpty (lc "Password is empty") model.password
         noErrors          = Tuple.all List.isEmpty (passwordErrors, loginErrors)
     in
         if | noErrors  -> checkAuthData model.login model.password `andThen` resolveCheckResult model
-           | otherwise -> Task.succeed <|
-                Model { model |
-                  password         <- "",
-                  validationErrors <- { login = loginErrors, password = passwordErrors }
-                }
+           | otherwise ->  
+                Task.succeed (Model { model |
+                                              password         <- "",
+                                              validationErrors <- { model.validationErrors | login = loginErrors, password = passwordErrors }
+                                            })
 
 checkAuthData : String -> String -> Task.Task Http.Error Bool
 checkAuthData login password =
+    -- TODO: Post with credentials
     Http.get (Response.resultDecoder <| Json.Decode.null "") "http://localhost:3000/auth"
         `andThen` (\result -> Task.succeed result.success)
 
 resolveCheckResult : LoginFormModel -> Bool -> UpdateTask LoginFormModel AuthIsSuccess
-resolveCheckResult model isAuthenticated =
-    if | isAuthenticated -> Task.succeed <| Action AuthIsSuccess
-       | otherwise       -> Task.succeed <|
-            Model { model |
-              password         <- "",
-              validationErrors <- { model.validationErrors | auth <- [lc "Authentication failed"] }
-            }
+resolveCheckResult model isAuthenticated = Task.succeed (Action AuthIsSuccess)
+    {-if isAuthenticated then Task.succeed (Action AuthIsSuccess)
+    else Task.succeed <|
+        Model { model |
+          password         <- "",
+          validationErrors <- { model.validationErrors | auth <- [lc "Authentication failed"] }
+        }-}
