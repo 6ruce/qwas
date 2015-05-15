@@ -8,8 +8,8 @@ import Http
 import Localization exposing (..)
 import Router       exposing (..)
 
-import Views.Login    as VLogin exposing (LoginAction, LoginFormModel)
-import Views.MainPage as VMainPage
+import Views.Login    as LoginM exposing (LoginAction, LoginFormModel)
+import Views.MainPage as MainPageM
 
 type Action
     = None
@@ -39,7 +39,7 @@ emptyModel =
     , authenticated = True
 
     -- Modules empty models
-    , loginForm     = VLogin.emptyModel
+    , loginForm     = LoginM.emptyModel
     }
 
 -- View Model Update
@@ -49,8 +49,8 @@ main = Signal.map view model
 view : Model -> Html
 view model =
     case model.currentPage of
-        Login    -> VLogin.view model.loginForm loginAddress
-        MainPage -> VMainPage.view
+        Login    -> LoginM.view model.loginForm loginAddress
+        MainPage -> MainPageM.view
 
 model : Signal Model
 model =
@@ -60,9 +60,9 @@ update : Action -> Model -> Model
 update action model =
     case action of
         SignIn loginAction ->
-            let updateResult = VLogin.update loginAction model.loginForm
+            let updateResult = LoginM.update loginAction model.loginForm
             in case updateResult of
-                Action (VLogin.AuthIsSuccess) -> { model | authenticated <- True, currentPage <- MainPage }
+                Action (LoginM.AuthIsSuccess) -> { model | authenticated <- True, currentPage <- MainPage }
                 Model  loginModel             -> { model | loginForm     <- loginModel }
         _ -> model
 
@@ -84,7 +84,7 @@ getData action =
         None               -> Task.succeed ""
         SignIn loginAction ->
             case loginAction of
-                VLogin.Submit -> Http.getString "http://localhost:3000/auth"
+                LoginM.Submit -> Http.getString "http://localhost:3000/auth"
                 _             -> Task.succeed ""
 
 port httpGetData : Signal (Task.Task Http.Error String)
