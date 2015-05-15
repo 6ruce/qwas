@@ -102,7 +102,7 @@ confirmLoginForm model =
                 let validationErrors = model.validationErrors
                 in  Task.succeed <| Model { model | password         <- ""
                                                   , validationErrors <- { validationErrors | login    <- loginErrors
-                                                                                                 , password <- passwordErrors } }
+                                                                                           , password <- passwordErrors } }
 
 checkAuthData : String -> String -> Task.Task Http.Error Bool
 checkAuthData login password =

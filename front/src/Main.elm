@@ -2,7 +2,7 @@ module Qwas where
 
 import Html exposing (..)
 import Signal
-import Task
+import Task exposing (Task)
 import Http
 
 import Localization exposing (..)
@@ -43,35 +43,37 @@ emptyModel =
     }
 
 -- View Model Update
-main : Signal Html
+main : Signal (Task () Html)
 main = Signal.map view model
 
-view : Model -> Html
-view model =
-    case model.currentPage of
-        Login    -> LoginM.view model.loginForm loginAddress
-        MainPage -> MainPageM.view
+view : Task () Model -> Task () Html
+view modelTask =
+    modelTask `andThen` \model ->
+        case model.currentPage of
+            Login    -> LoginM.view model.loginForm loginAddress
+            MainPage -> MainPageM.view
 
-model : Signal Model
+model : Signal (Task () Model)
 model =
-    Signal.foldp update emptyModel mainMailbox.signal
+    Signal.foldp update (Task.succeed emptyModel) mainMailbox.signal
 
-update : Action -> Model -> Model
-update action model =
-    case action of
-        SignIn loginAction ->
-            let updateResult = LoginM.update loginAction model.loginForm
-            in case updateResult of
-                Action (LoginM.AuthIsSuccess) -> { model | authenticated <- True, currentPage <- MainPage }
-                Model  loginModel             -> { model | loginForm     <- loginModel }
-        _ -> model
+update : Action -> Task () Model -> Task () Model
+update action modelTask =
+    -- TODO: Show Http.Error messages on page 
+    modelTask `andThen` \model ->
+        case action of
+            SignIn loginAction ->
+                let updateResultTask = LoginM.update loginAction model.loginForm
+                in 
+                    updateResultTask `andThen` \updateResult ->
+                        case updateResult of
+                            Action (LoginM.AuthIsSuccess) -> { model | authenticated <- True, currentPage <- MainPage }
+                            Model  loginModel             -> { model | loginForm     <- loginModel }
+            _ -> model
 
 -- Mailboxes
 mainMailbox : Signal.Mailbox Action
 mainMailbox = Signal.mailbox None
-
-portsMailbox : Signal.Mailbox Action
-portsMailbox = Signal.mailbox None
 
 loginAddress : Signal.Address LoginAction
 loginAddress =
