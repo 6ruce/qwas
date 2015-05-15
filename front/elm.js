@@ -12937,65 +12937,83 @@ Elm.Qwas.make = function (_elm) {
    $Task = Elm.Task.make(_elm),
    $Views$Login = Elm.Views.Login.make(_elm),
    $Views$MainPage = Elm.Views.MainPage.make(_elm);
-   var getData = function (action) {
-      return function () {
-         switch (action.ctor)
-         {case "None":
-            return $Task.succeed("");
-            case "SignIn":
-            return function () {
-                 switch (action._0.ctor)
-                 {case "Submit":
-                    return $Http.getString("http://localhost:3000/auth");}
-                 return $Task.succeed("");
-              }();}
-         _U.badCase($moduleName,
-         "between lines 80 and 85");
-      }();
-   };
-   var Model = F3(function (a,
+   var showHttpError = F2(function (model,
+   error) {
+      return $Task.succeed(_U.replace([["errors"
+                                       ,_L.fromArray([$Localization.lc("Http error")])]],
+      model));
+   });
+   var Model = F5(function (a,
    b,
-   c) {
+   c,
+   d,
+   e) {
       return {_: {}
+             ,authenticated: c
              ,currentPage: b
-             ,loginForm: c
+             ,errors: d
+             ,loginForm: e
              ,pageTitle: a};
    });
    var MainPage = {ctor: "MainPage"};
    var update = F2(function (action,
-   model) {
-      return function () {
-         switch (action.ctor)
-         {case "SignIn":
-            return function () {
-                 var updateResult = A2($Views$Login.update,
-                 action._0,
-                 model.loginForm);
-                 return function () {
-                    switch (updateResult.ctor)
-                    {case "Action":
-                       switch (updateResult._0.ctor)
-                         {case "RedirectAfterLogin":
-                            return _U.replace([["currentPage"
-                                               ,MainPage]],
-                              model);}
-                         break;
-                       case "Model":
-                       return _U.replace([["loginForm"
-                                          ,updateResult._0]],
-                         model);}
-                    _U.badCase($moduleName,
-                    "between lines 60 and 63");
-                 }();
-              }();}
-         return model;
-      }();
+   modelTask) {
+      return A2($Task.andThen,
+      modelTask,
+      function (model) {
+         return function () {
+            switch (action.ctor)
+            {case "SignIn":
+               return function () {
+                    var updateResultTask = A2($Views$Login.update,
+                    action._0,
+                    model.loginForm);
+                    return A2($Task.onError,
+                    A2($Task.andThen,
+                    updateResultTask,
+                    function (updateResult) {
+                       return function () {
+                          switch (updateResult.ctor)
+                          {case "Action":
+                             switch (updateResult._0.ctor)
+                               {case "AuthIsSuccess":
+                                  return $Task.succeed(_U.replace([["authenticated"
+                                                                   ,true]
+                                                                  ,["currentPage"
+                                                                   ,MainPage]],
+                                    model));}
+                               break;
+                             case "Model":
+                             return $Task.succeed(_U.replace([["loginForm"
+                                                              ,updateResult._0]],
+                               model));}
+                          _U.badCase($moduleName,
+                          "between lines 72 and 74");
+                       }();
+                    }),
+                    showHttpError(model));
+                 }();}
+            return $Task.succeed(model);
+         }();
+      });
    });
    var Login = {ctor: "Login"};
    var emptyModel = {_: {}
+                    ,authenticated: true
                     ,currentPage: Login
+                    ,errors: _L.fromArray([])
                     ,loginForm: $Views$Login.emptyModel
                     ,pageTitle: $Localization.lc("Qwas")};
+   var modelMailbox = $Signal.mailbox(emptyModel);
+   var getData = function (modelTask) {
+      return A2($Task.andThen,
+      modelTask,
+      function (model) {
+         return A2($Signal.send,
+         modelMailbox.address,
+         model);
+      });
+   };
    var SignIn = function (a) {
       return {ctor: "SignIn"
              ,_0: a};
@@ -13004,15 +13022,17 @@ Elm.Qwas.make = function (_elm) {
    var mainMailbox = $Signal.mailbox(None);
    var model = A3($Signal.foldp,
    update,
-   emptyModel,
+   $Task.succeed(emptyModel),
    mainMailbox.signal);
+   var httpTasks = Elm.Native.Task.make(_elm).performSignal("httpTasks",
+   A2($Signal.map,getData,model));
    var loginAddress = A2($Signal.forwardTo,
    mainMailbox.address,
    SignIn);
    var view = function (model) {
       return function () {
-         var _v8 = model.currentPage;
-         switch (_v8.ctor)
+         var _v5 = model.currentPage;
+         switch (_v5.ctor)
          {case "Login":
             return A2($Views$Login.view,
               model.loginForm,
@@ -13020,17 +13040,12 @@ Elm.Qwas.make = function (_elm) {
             case "MainPage":
             return $Views$MainPage.view;}
          _U.badCase($moduleName,
-         "between lines 47 and 49");
+         "between lines 56 and 58");
       }();
    };
    var main = A2($Signal.map,
    view,
-   model);
-   var httpGetData = Elm.Native.Task.make(_elm).performSignal("httpGetData",
-   A2($Signal.map,
-   getData,
-   mainMailbox.signal));
-   var portsMailbox = $Signal.mailbox(None);
+   modelMailbox.signal);
    _elm.Qwas.values = {_op: _op
                       ,None: None
                       ,SignIn: SignIn
@@ -13042,8 +13057,9 @@ Elm.Qwas.make = function (_elm) {
                       ,view: view
                       ,model: model
                       ,update: update
+                      ,showHttpError: showHttpError
+                      ,modelMailbox: modelMailbox
                       ,mainMailbox: mainMailbox
-                      ,portsMailbox: portsMailbox
                       ,loginAddress: loginAddress
                       ,getData: getData};
    return _elm.Qwas.values;
@@ -13064,8 +13080,8 @@ Elm.Response.make = function (_elm) {
    b,
    c) {
       return {_: {}
-             ,data: b
              ,errors: c
+             ,response: b
              ,success: a};
    });
    var resultDecoder = function (dataDecoder) {
@@ -13075,7 +13091,7 @@ Elm.Response.make = function (_elm) {
       "success",
       $Json$Decode.bool),
       A2($Json$Decode._op[":="],
-      "data",
+      "response",
       dataDecoder),
       A2($Json$Decode._op[":="],
       "errors",
@@ -13340,7 +13356,9 @@ Elm.Router.make = function (_elm) {
    _N = Elm.Native,
    _U = _N.Utils.make(_elm),
    _L = _N.List.make(_elm),
-   $moduleName = "Router";
+   $moduleName = "Router",
+   $Http = Elm.Http.make(_elm),
+   $Task = Elm.Task.make(_elm);
    var Action = function (a) {
       return {ctor: "Action"
              ,_0: a};
@@ -14053,6 +14071,42 @@ Elm.Transform2D.make = function (_elm) {
                              ,scaleY: scaleY};
    return _elm.Transform2D.values;
 };
+Elm.Validators = Elm.Validators || {};
+Elm.Validators.Text = Elm.Validators.Text || {};
+Elm.Validators.Text.make = function (_elm) {
+   "use strict";
+   _elm.Validators = _elm.Validators || {};
+   _elm.Validators.Text = _elm.Validators.Text || {};
+   if (_elm.Validators.Text.values)
+   return _elm.Validators.Text.values;
+   var _op = {},
+   _N = Elm.Native,
+   _U = _N.Utils.make(_elm),
+   _L = _N.List.make(_elm),
+   $moduleName = "Validators.Text",
+   $Basics = Elm.Basics.make(_elm),
+   $Result = Elm.Result.make(_elm);
+   var toErrorList = function (result) {
+      return function () {
+         switch (result.ctor)
+         {case "Err":
+            return _L.fromArray([result._0]);
+            case "Ok":
+            return _L.fromArray([]);}
+         _U.badCase($moduleName,
+         "between lines 14 and 16");
+      }();
+   };
+   var notEmpty = F2(function (message,
+   value) {
+      return _U.eq(value,
+      "") ? $Result.Err(message) : $Result.Ok(value);
+   });
+   _elm.Validators.Text.values = {_op: _op
+                                 ,notEmpty: notEmpty
+                                 ,toErrorList: toErrorList};
+   return _elm.Validators.Text.values;
+};
 Elm.Views = Elm.Views || {};
 Elm.Views.Login = Elm.Views.Login || {};
 Elm.Views.Login.make = function (_elm) {
@@ -14079,16 +14133,9 @@ Elm.Views.Login.make = function (_elm) {
    $Router = Elm.Router.make(_elm),
    $Signal = Elm.Signal.make(_elm),
    $Task = Elm.Task.make(_elm),
+   $Validators$Text = Elm.Validators.Text.make(_elm),
    $Widgets$Buttons = Elm.Widgets.Buttons.make(_elm),
    $Widgets$Fields = Elm.Widgets.Fields.make(_elm);
-   var checkPassword = function (password) {
-      return _U.eq(password,
-      "") ? _L.fromArray([$Localization.lc("Password is empty")]) : _L.fromArray([]);
-   };
-   var checkLogin = function (login) {
-      return _U.eq(login,
-      "") ? _L.fromArray([$Localization.lc("Login is empty")]) : _L.fromArray([]);
-   };
    var checkAuthData = F2(function (login,
    password) {
       return A2($Task.andThen,
@@ -14119,11 +14166,14 @@ Elm.Views.Login.make = function (_elm) {
                     ,login: ""
                     ,password: ""
                     ,validationErrors: {_: {}
+                                       ,auth: _L.fromArray([])
                                        ,login: _L.fromArray([])
                                        ,password: _L.fromArray([])}};
-   var ValidationErrors = F2(function (a,
-   b) {
+   var ValidationErrors = F3(function (a,
+   b,
+   c) {
       return {_: {}
+             ,auth: c
              ,login: a
              ,password: b};
    });
@@ -14164,7 +14214,8 @@ Elm.Views.Login.make = function (_elm) {
                       _L.fromArray([$Widgets$Fields.onInput(sendAction(UpdatePassword))]),
                       isPasswordValid)
                       ,$Widgets$Fields.errorMessages($List.concat(_L.fromArray([errors.login
-                                                                               ,errors.password])))
+                                                                               ,errors.password
+                                                                               ,errors.auth])))
                       ,A2($Widgets$Buttons.simpleButton,
                       $Localization.lc("Sign In"),
                       _L.fromArray([A2($Html$Events.onClick,
@@ -14178,23 +14229,52 @@ Elm.Views.Login.make = function (_elm) {
       mailboxAddress,
       model));
    });
-   var RedirectAfterLogin = {ctor: "RedirectAfterLogin"};
+   var AuthIsSuccess = {ctor: "AuthIsSuccess"};
+   var resolveCheckResult = F2(function (model,
+   isAuthenticated) {
+      return function () {
+         var updateResult = isAuthenticated ? $Router.Action(AuthIsSuccess) : function () {
+            var validationErrors = model.validationErrors;
+            return $Router.Model(_U.replace([["password"
+                                             ,""]
+                                            ,["validationErrors"
+                                             ,_U.replace([["auth"
+                                                          ,_L.fromArray([$Localization.lc("Authentication failed")])]],
+                                             validationErrors)]],
+            model));
+         }();
+         return $Task.succeed(updateResult);
+      }();
+   });
    var confirmLoginForm = function (model) {
       return function () {
-         var passwordErrors = checkPassword(model.password);
-         var loginErrors = checkLogin(model.login);
+         var passwordErrors = $Validators$Text.toErrorList(A2($Validators$Text.notEmpty,
+         $Localization.lc("Password is empty"),
+         model.password));
+         var loginErrors = $Validators$Text.toErrorList(A2($Validators$Text.notEmpty,
+         $Localization.lc("Login is empty"),
+         model.login));
          var noErrors = A2($Common$Tuple.all,
          $List.isEmpty,
          {ctor: "_Tuple2"
          ,_0: passwordErrors
          ,_1: loginErrors});
-         return noErrors ? $Router.Action(RedirectAfterLogin) : $Router.Model(_U.replace([["password"
-                                                                                          ,""]
-                                                                                         ,["validationErrors"
-                                                                                          ,{_: {}
-                                                                                           ,login: loginErrors
-                                                                                           ,password: passwordErrors}]],
-         model));
+         return noErrors ? A2($Task.andThen,
+         A2(checkAuthData,
+         model.login,
+         model.password),
+         resolveCheckResult(model)) : function () {
+            var validationErrors = model.validationErrors;
+            return $Task.succeed($Router.Model(_U.replace([["password"
+                                                           ,""]
+                                                          ,["validationErrors"
+                                                           ,_U.replace([["login"
+                                                                        ,loginErrors]
+                                                                       ,["password"
+                                                                        ,passwordErrors]],
+                                                           validationErrors)]],
+            model)));
+         }();
       }();
    };
    var update = F2(function (action,
@@ -14204,41 +14284,23 @@ Elm.Views.Login.make = function (_elm) {
          {case "Submit":
             return confirmLoginForm(modelBefore);
             case "UpdateLogin":
-            return $Router.Model(_U.replace([["login"
-                                             ,action._0]],
-              modelBefore));
+            return $Task.succeed($Router.Model(_U.replace([["login"
+                                                           ,action._0]],
+              modelBefore)));
             case "UpdatePassword":
-            return $Router.Model(_U.replace([["password"
-                                             ,action._0]],
-              modelBefore));}
+            return $Task.succeed($Router.Model(_U.replace([["password"
+                                                           ,action._0]],
+              modelBefore)));}
          _U.badCase($moduleName,
-         "between lines 66 and 69");
+         "between lines 70 and 73");
       }();
    });
-   var confirmLoginForm1 = function (model) {
-      return function () {
-         var passwordErrors = checkPassword(model.password);
-         var loginErrors = checkLogin(model.login);
-         var noErrors = A2($Common$Tuple.all,
-         $List.isEmpty,
-         {ctor: "_Tuple2"
-         ,_0: passwordErrors
-         ,_1: loginErrors});
-         return noErrors ? $Task.succeed($Router.Action(RedirectAfterLogin)) : $Task.succeed($Router.Model(_U.replace([["password"
-                                                                                                                       ,""]
-                                                                                                                      ,["validationErrors"
-                                                                                                                       ,{_: {}
-                                                                                                                        ,login: loginErrors
-                                                                                                                        ,password: passwordErrors}]],
-         model)));
-      }();
-   };
    _elm.Views.Login.values = {_op: _op
                              ,emptyModel: emptyModel
                              ,view: view
                              ,update: update
                              ,LoginFormModel: LoginFormModel
-                             ,RedirectAfterLogin: RedirectAfterLogin
+                             ,AuthIsSuccess: AuthIsSuccess
                              ,Submit: Submit
                              ,UpdateLogin: UpdateLogin
                              ,UpdatePassword: UpdatePassword};
