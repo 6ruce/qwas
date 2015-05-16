@@ -1,6 +1,6 @@
 module Views.Login
     ( AuthIsSuccess (AuthIsSuccess)
-    , LoginAction (..) --remove (..) after debug
+    , LoginAction
     , LoginFormModel
     , emptyModel
     , view
@@ -69,8 +69,8 @@ update : LoginAction -> LoginFormModel -> UpdateTask LoginFormModel AuthIsSucces
 update action modelBefore =
     case action of
         Submit                  -> confirmLoginForm modelBefore
-        UpdateLogin    login    -> Task.succeed <| Model { modelBefore | login    <- login }
-        UpdatePassword password -> Task.succeed <| Model { modelBefore | password <- password }
+        UpdateLogin    login    -> Task.succeed <| UpdatedModel { modelBefore | login    <- login }
+        UpdatePassword password -> Task.succeed <| UpdatedModel { modelBefore | password <- password }
 
 -- Login Form
 sendLoginAction : Signal.Address LoginAction -> (a -> LoginAction) -> a -> Signal.Message
@@ -100,9 +100,9 @@ confirmLoginForm model =
         if | noErrors  -> (checkAuthData model.login model.password) `andThen` (resolveCheckResult model)
            | otherwise ->
                 let validationErrors = model.validationErrors
-                in  Task.succeed <| Model { model | password         <- ""
-                                                  , validationErrors <- { validationErrors | login    <- loginErrors
-                                                                                           , password <- passwordErrors } }
+                in  Task.succeed <| UpdatedModel { model | password         <- ""
+                                                          , validationErrors <- { validationErrors | login    <- loginErrors
+                                                                                                   , password <- passwordErrors } }
 
 checkAuthData : String -> String -> Task.Task Http.Error Bool
 checkAuthData login password =
@@ -117,7 +117,6 @@ resolveCheckResult model isAuthenticated =
         if | isAuthenticated -> Action AuthIsSuccess
            | otherwise       ->
                 let validationErrors = model.validationErrors
-                in  Model { model | password         <- ""
-                                  , validationErrors <- { validationErrors | auth <- [lc "Authentication failed"] } }
+                in  UpdatedModel { model | password         <- ""
+                                         , validationErrors <- { validationErrors | auth <- [lc "Authentication failed"] } }
     in Task.succeed updateResult
-

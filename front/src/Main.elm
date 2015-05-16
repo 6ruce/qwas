@@ -6,30 +6,36 @@ import Task exposing ( Task
                      , andThen
                      , onError
                      , mapError )
-import Http
 
+import Http
+import Maybe exposing (Maybe(..))
+
+import Application  exposing (ApplicationError(..))
 import Localization exposing (..)
 import Router       exposing (..)
 
-import Views.Login    as LoginM exposing (LoginAction, LoginFormModel)
-import Views.MainPage as MainPageM
+import Layouts.MainLayout as MainLayout
+import Views.Login        as LoginM exposing (LoginAction, LoginFormModel)
+import Views.MainPage     as MainPageM
 
 type Action
     = None
     | SignIn LoginAction
+    | UpdateModel Model
 
 type Page
     = Login
     | MainPage
 
 -- Application state
-type alias Model =
-    {
+type Model =
+    Model {
     -- General application state
       pageTitle     : String
     , currentPage   : Page
+    , updateTask    : Maybe (Task () Model)
     , authenticated : Bool
-    , errors        : List String
+    , errors        : List ApplicationError
 
     -- Login page state
     , loginForm : LoginFormModel
@@ -38,47 +44,52 @@ type alias Model =
 
 emptyModel : Model
 emptyModel =
-    { pageTitle     = lc "Qwas"
-    , currentPage   = Login
-    , authenticated = True
-    , errors        = []
+    Model
+        { pageTitle     = lc "Qwas"
+        , currentPage   = Login
+        , updateTask    = Nothing
+        , authenticated = False
+        , errors        = []
 
-    -- Modules empty models
-    , loginForm     = LoginM.emptyModel
-    }
+        -- Modules empty models
+        , loginForm     = LoginM.emptyModel
+        }
 
 -- View Model Update
 main : Signal Html
 main = Signal.map view modelMailbox.signal
 
 view : Model -> Html
-view model =
-    case model.currentPage of
-        Login    -> LoginM.view model.loginForm loginAddress
-        MainPage -> MainPageM.view
+view (Model model) =
+    let content =
+        case model.currentPage of
+            Login    -> LoginM.view model.loginForm loginAddress
+            MainPage -> MainPageM.view
+    in MainLayout.view model.errors content
 
-model : Signal (Task () Model)
+model : Signal Model
 model =
-    Signal.foldp update (Task.succeed emptyModel) mainMailbox.signal
+    Signal.foldp update emptyModel mainMailbox.signal
 
-update : Action -> Task () Model -> Task () Model
-update action modelTask =
-    modelTask `andThen` \model ->
-        case action of
-            SignIn loginAction ->
-                let updateResultTask = LoginM.update loginAction model.loginForm
-                in  updateResultTask
+update : Action -> Model -> Model
+update action (Model model) =
+    case action of
+        SignIn loginAction ->
+            let loginUpdateTask = LoginM.update loginAction model.loginForm
+                updateTask = loginUpdateTask
                     `andThen` (\updateResult ->
                         case updateResult of
-                            Action (LoginM.AuthIsSuccess) -> Task.succeed { model | authenticated <- True, currentPage <- MainPage }
-                            Model  loginModel             -> Task.succeed { model | loginForm     <- loginModel })
-                    `onError` (showHttpError model)
-            _ -> Task.succeed model
+                            Action (LoginM.AuthIsSuccess) -> Task.succeed <| Model { model | authenticated <- True, currentPage <- MainPage }
+                            UpdatedModel loginModel       -> Task.succeed <| Model { model | loginForm     <- loginModel })
+                    `andThen` (\(Model updatedModel) -> Task.succeed <| Model { updatedModel | errors <- [] })
+                    `onError` (showHttpError <| Model model)
+            in Model { model | updateTask <- Just updateTask }
+        UpdateModel (Model newModel) -> Model { newModel | updateTask <- Nothing }
+        _                            -> Model model
 
 showHttpError : Model -> Http.Error -> Task () Model
-showHttpError model error =
-    -- TODO: Show proper Http.Error messages 
-    Task.succeed { model | errors <- [lc "Http error"] }
+showHttpError (Model model) error =                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     
+    Task.succeed <| Model { model | errors <- [NetworkError error] }
 
 -- Mailboxes
 modelMailbox : Signal.Mailbox Model
@@ -92,11 +103,15 @@ loginAddress =
     Signal.forwardTo mainMailbox.address SignIn
 
 -- Ports
-getData : Task () Model -> Task () ()
-getData modelTask =
-    modelTask `andThen` \model -> Signal.send modelMailbox.address model
+getData : Model -> Task () (List ())
+getData (Model model) =
+    case model.updateTask of
+        Just task -> task
+            `andThen` (\model -> Task.sequence [ Signal.send modelMailbox.address model
+                                               , Signal.send mainMailbox.address (UpdateModel model)])
+        Nothing -> Task.succeed []
 
-port httpTasks : Signal (Task () ())
+port httpTasks : Signal (Task () (List ()))
 port httpTasks =
     Signal.map getData model
 

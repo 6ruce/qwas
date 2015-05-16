@@ -1,4 +1,29 @@
 var Elm = Elm || { Native: {} };
+Elm.Application = Elm.Application || {};
+Elm.Application.make = function (_elm) {
+   "use strict";
+   _elm.Application = _elm.Application || {};
+   if (_elm.Application.values)
+   return _elm.Application.values;
+   var _op = {},
+   _N = Elm.Native,
+   _U = _N.Utils.make(_elm),
+   _L = _N.List.make(_elm),
+   $moduleName = "Application",
+   $Http = Elm.Http.make(_elm);
+   var OtherError = function (a) {
+      return {ctor: "OtherError"
+             ,_0: a};
+   };
+   var NetworkError = function (a) {
+      return {ctor: "NetworkError"
+             ,_0: a};
+   };
+   _elm.Application.values = {_op: _op
+                             ,NetworkError: NetworkError
+                             ,OtherError: OtherError};
+   return _elm.Application.values;
+};
 Elm.Array = Elm.Array || {};
 Elm.Array.make = function (_elm) {
    "use strict";
@@ -4094,6 +4119,118 @@ Elm.Json.Encode.make = function (_elm) {
                              ,array: array
                              ,list: list};
    return _elm.Json.Encode.values;
+};
+Elm.Layouts = Elm.Layouts || {};
+Elm.Layouts.MainLayout = Elm.Layouts.MainLayout || {};
+Elm.Layouts.MainLayout.make = function (_elm) {
+   "use strict";
+   _elm.Layouts = _elm.Layouts || {};
+   _elm.Layouts.MainLayout = _elm.Layouts.MainLayout || {};
+   if (_elm.Layouts.MainLayout.values)
+   return _elm.Layouts.MainLayout.values;
+   var _op = {},
+   _N = Elm.Native,
+   _U = _N.Utils.make(_elm),
+   _L = _N.List.make(_elm),
+   $moduleName = "Layouts.MainLayout",
+   $Application = Elm.Application.make(_elm),
+   $Basics = Elm.Basics.make(_elm),
+   $Html = Elm.Html.make(_elm),
+   $Html$Attributes = Elm.Html.Attributes.make(_elm),
+   $Http = Elm.Http.make(_elm),
+   $List = Elm.List.make(_elm);
+   var getNetworkErrorText = function (error) {
+      return function () {
+         switch (error.ctor)
+         {case "BadResponse":
+            return A2($Basics._op["++"],
+              "Bad response ",
+              A2($Basics._op["++"],
+              $Basics.toString(error._0),
+              A2($Basics._op["++"],
+              "[",
+              A2($Basics._op["++"],
+              error._1,
+              "]"))));
+            case "NetworkError":
+            return "Problems with network";
+            case "Timeout":
+            return "Request is timeout";
+            case "UnexpectedPayload":
+            return A2($Basics._op["++"],
+              "Unexpected payload [",
+              A2($Basics._op["++"],
+              error._0,
+              "]"));}
+         _U.badCase($moduleName,
+         "between lines 43 and 47");
+      }();
+   };
+   var formatAppErrors = function (appErrors) {
+      return A2($List.map,
+      function (error) {
+         return function () {
+            switch (error.ctor)
+            {case "NetworkError":
+               return A2($Basics._op["++"],
+                 "Http error: ",
+                 getNetworkErrorText(error._0));}
+            return "Something gone wrong!";
+         }();
+      },
+      appErrors);
+   };
+   var errorMessagePanel = function (errors) {
+      return A2($Html.div,
+      _L.fromArray([$Html$Attributes.$class("ui four column centered grid")]),
+      _L.fromArray([A2($Html.div,
+      _L.fromArray([$Html$Attributes.$class("column")]),
+      _L.fromArray([A2($Html.div,
+      _L.fromArray([$Html$Attributes.classList(_L.fromArray([{ctor: "_Tuple2"
+                                                             ,_0: "ui bottom attached error message"
+                                                             ,_1: true}
+                                                            ,{ctor: "_Tuple2"
+                                                             ,_0: "hidden"
+                                                             ,_1: $List.isEmpty(errors)}]))]),
+      _L.fromArray([A2($Html.div,
+                   _L.fromArray([$Html$Attributes.$class("header")]),
+                   _L.fromArray([$Html.text("Application Error")]))
+                   ,A2($Html.ul,
+                   _L.fromArray([$Html$Attributes.$class("list")]),
+                   $List.map(function (error) {
+                      return A2($Html.li,
+                      _L.fromArray([]),
+                      _L.fromArray([$Html.text(error)]));
+                   })(formatAppErrors(errors)))]))]))]));
+   };
+   var view = F2(function (errors,
+   content) {
+      return A2($Html.div,
+      _L.fromArray([$Html$Attributes.id("container")
+                   ,$Html$Attributes.style(_L.fromArray([{ctor: "_Tuple2"
+                                                         ,_0: "width"
+                                                         ,_1: "100%"}
+                                                        ,{ctor: "_Tuple2"
+                                                         ,_0: "height"
+                                                         ,_1: "100%"}]))]),
+      _L.fromArray([errorMessagePanel(errors)
+                   ,content
+                   ,A3($Html.node,
+                   "link",
+                   _L.fromArray([$Html$Attributes.rel("stylesheet")
+                                ,$Html$Attributes.type$("text/css")
+                                ,$Html$Attributes.href("main.css")]),
+                   _L.fromArray([]))
+                   ,A3($Html.node,
+                   "link",
+                   _L.fromArray([$Html$Attributes.rel("stylesheet")
+                                ,$Html$Attributes.type$("text/css")
+                                ,$Html$Attributes.href("semantic.min.css")]),
+                   _L.fromArray([]))]));
+   });
+   _elm.Layouts.MainLayout.values = {_op: _op
+                                    ,view: view};
+   return _elm.Layouts.MainLayout.values;
 };
 Elm.List = Elm.List || {};
 Elm.List.make = function (_elm) {
@@ -12929,90 +13066,111 @@ Elm.Qwas.make = function (_elm) {
    _U = _N.Utils.make(_elm),
    _L = _N.List.make(_elm),
    $moduleName = "Qwas",
+   $Application = Elm.Application.make(_elm),
+   $Basics = Elm.Basics.make(_elm),
    $Html = Elm.Html.make(_elm),
    $Http = Elm.Http.make(_elm),
+   $Layouts$MainLayout = Elm.Layouts.MainLayout.make(_elm),
    $Localization = Elm.Localization.make(_elm),
+   $Maybe = Elm.Maybe.make(_elm),
    $Router = Elm.Router.make(_elm),
    $Signal = Elm.Signal.make(_elm),
    $Task = Elm.Task.make(_elm),
    $Views$Login = Elm.Views.Login.make(_elm),
    $Views$MainPage = Elm.Views.MainPage.make(_elm);
-   var showHttpError = F2(function (model,
+   var Model = function (a) {
+      return {ctor: "Model",_0: a};
+   };
+   var showHttpError = F2(function (_v0,
    error) {
-      return $Task.succeed(_U.replace([["errors"
-                                       ,_L.fromArray([$Localization.lc("Http error")])]],
-      model));
-   });
-   var Model = F5(function (a,
-   b,
-   c,
-   d,
-   e) {
-      return {_: {}
-             ,authenticated: c
-             ,currentPage: b
-             ,errors: d
-             ,loginForm: e
-             ,pageTitle: a};
+      return function () {
+         switch (_v0.ctor)
+         {case "Model":
+            return $Task.succeed(Model(_U.replace([["errors"
+                                                   ,_L.fromArray([$Application.NetworkError(error)])]],
+              _v0._0)));}
+         _U.badCase($moduleName,
+         "on line 92, column 5 to 67");
+      }();
    });
    var MainPage = {ctor: "MainPage"};
    var update = F2(function (action,
-   modelTask) {
-      return A2($Task.andThen,
-      modelTask,
-      function (model) {
-         return function () {
-            switch (action.ctor)
-            {case "SignIn":
-               return function () {
-                    var updateResultTask = A2($Views$Login.update,
-                    action._0,
-                    model.loginForm);
-                    return A2($Task.onError,
-                    A2($Task.andThen,
-                    updateResultTask,
-                    function (updateResult) {
-                       return function () {
-                          switch (updateResult.ctor)
-                          {case "Action":
-                             switch (updateResult._0.ctor)
-                               {case "AuthIsSuccess":
-                                  return $Task.succeed(_U.replace([["authenticated"
-                                                                   ,true]
-                                                                  ,["currentPage"
-                                                                   ,MainPage]],
-                                    model));}
-                               break;
-                             case "Model":
-                             return $Task.succeed(_U.replace([["loginForm"
-                                                              ,updateResult._0]],
-                               model));}
-                          _U.badCase($moduleName,
-                          "between lines 72 and 74");
-                       }();
-                    }),
-                    showHttpError(model));
-                 }();}
-            return $Task.succeed(model);
-         }();
-      });
+   _v3) {
+      return function () {
+         switch (_v3.ctor)
+         {case "Model":
+            return function () {
+                 switch (action.ctor)
+                 {case "SignIn":
+                    return function () {
+                         var loginUpdateTask = A2($Views$Login.update,
+                         action._0,
+                         _v3._0.loginForm);
+                         var updateTask = A2($Task.onError,
+                         A2($Task.andThen,
+                         A2($Task.andThen,
+                         loginUpdateTask,
+                         function (updateResult) {
+                            return function () {
+                               switch (updateResult.ctor)
+                               {case "Action":
+                                  switch (updateResult._0.ctor)
+                                    {case "AuthIsSuccess":
+                                       return $Task.succeed(Model(_U.replace([["authenticated"
+                                                                              ,true]
+                                                                             ,["currentPage"
+                                                                              ,MainPage]],
+                                         _v3._0)));}
+                                    break;
+                                  case "UpdatedModel":
+                                  return $Task.succeed(Model(_U.replace([["loginForm"
+                                                                         ,updateResult._0]],
+                                    _v3._0)));}
+                               _U.badCase($moduleName,
+                               "between lines 81 and 83");
+                            }();
+                         }),
+                         function (_v13) {
+                            return function () {
+                               switch (_v13.ctor)
+                               {case "Model":
+                                  return $Task.succeed(Model(_U.replace([["errors"
+                                                                         ,_L.fromArray([])]],
+                                    _v13._0)));}
+                               _U.badCase($moduleName,
+                               "on line 84, column 57 to 108");
+                            }();
+                         }),
+                         showHttpError(Model(_v3._0)));
+                         return Model(_U.replace([["updateTask"
+                                                  ,$Maybe.Just(updateTask)]],
+                         _v3._0));
+                      }();
+                    case "UpdateModel":
+                    switch (action._0.ctor)
+                      {case "Model":
+                         return Model(_U.replace([["updateTask"
+                                                  ,$Maybe.Nothing]],
+                           action._0._0));}
+                      break;}
+                 return Model(_v3._0);
+              }();}
+         _U.badCase($moduleName,
+         "between lines 76 and 88");
+      }();
    });
    var Login = {ctor: "Login"};
-   var emptyModel = {_: {}
-                    ,authenticated: true
-                    ,currentPage: Login
-                    ,errors: _L.fromArray([])
-                    ,loginForm: $Views$Login.emptyModel
-                    ,pageTitle: $Localization.lc("Qwas")};
+   var emptyModel = Model({_: {}
+                          ,authenticated: false
+                          ,currentPage: Login
+                          ,errors: _L.fromArray([])
+                          ,loginForm: $Views$Login.emptyModel
+                          ,pageTitle: $Localization.lc("Qwas")
+                          ,updateTask: $Maybe.Nothing});
    var modelMailbox = $Signal.mailbox(emptyModel);
-   var getData = function (modelTask) {
-      return A2($Task.andThen,
-      modelTask,
-      function (model) {
-         return A2($Signal.send,
-         modelMailbox.address,
-         model);
-      });
+   var UpdateModel = function (a) {
+      return {ctor: "UpdateModel"
+             ,_0: a};
    };
    var SignIn = function (a) {
       return {ctor: "SignIn"
@@ -13022,33 +13180,72 @@ Elm.Qwas.make = function (_elm) {
    var mainMailbox = $Signal.mailbox(None);
    var model = A3($Signal.foldp,
    update,
-   $Task.succeed(emptyModel),
+   emptyModel,
    mainMailbox.signal);
-   var httpTasks = Elm.Native.Task.make(_elm).performSignal("httpTasks",
-   A2($Signal.map,getData,model));
    var loginAddress = A2($Signal.forwardTo,
    mainMailbox.address,
    SignIn);
-   var view = function (model) {
+   var view = function (_v16) {
       return function () {
-         var _v5 = model.currentPage;
-         switch (_v5.ctor)
-         {case "Login":
-            return A2($Views$Login.view,
-              model.loginForm,
-              loginAddress);
-            case "MainPage":
-            return $Views$MainPage.view;}
+         switch (_v16.ctor)
+         {case "Model":
+            return function () {
+                 var content = function () {
+                    var _v19 = _v16._0.currentPage;
+                    switch (_v19.ctor)
+                    {case "Login":
+                       return A2($Views$Login.view,
+                         _v16._0.loginForm,
+                         loginAddress);
+                       case "MainPage":
+                       return $Views$MainPage.view;}
+                    _U.badCase($moduleName,
+                    "between lines 65 and 68");
+                 }();
+                 return A2($Layouts$MainLayout.view,
+                 _v16._0.errors,
+                 content);
+              }();}
          _U.badCase($moduleName,
-         "between lines 56 and 58");
+         "between lines 64 and 68");
       }();
    };
    var main = A2($Signal.map,
    view,
    modelMailbox.signal);
+   var getData = function (_v20) {
+      return function () {
+         switch (_v20.ctor)
+         {case "Model":
+            return function () {
+                 var _v23 = _v20._0.updateTask;
+                 switch (_v23.ctor)
+                 {case "Just":
+                    return A2($Task.andThen,
+                      _v23._0,
+                      function (model) {
+                         return $Task.sequence(_L.fromArray([A2($Signal.send,
+                                                            modelMailbox.address,
+                                                            model)
+                                                            ,A2($Signal.send,
+                                                            mainMailbox.address,
+                                                            UpdateModel(model))]));
+                      });
+                    case "Nothing":
+                    return $Task.succeed(_L.fromArray([]));}
+                 _U.badCase($moduleName,
+                 "between lines 108 and 112");
+              }();}
+         _U.badCase($moduleName,
+         "between lines 108 and 112");
+      }();
+   };
+   var httpTasks = Elm.Native.Task.make(_elm).performSignal("httpTasks",
+   A2($Signal.map,getData,model));
    _elm.Qwas.values = {_op: _op
                       ,None: None
                       ,SignIn: SignIn
+                      ,UpdateModel: UpdateModel
                       ,Login: Login
                       ,MainPage: MainPage
                       ,Model: Model
@@ -13363,11 +13560,12 @@ Elm.Router.make = function (_elm) {
       return {ctor: "Action"
              ,_0: a};
    };
-   var Model = function (a) {
-      return {ctor: "Model",_0: a};
+   var UpdatedModel = function (a) {
+      return {ctor: "UpdatedModel"
+             ,_0: a};
    };
    _elm.Router.values = {_op: _op
-                        ,Model: Model
+                        ,UpdatedModel: UpdatedModel
                         ,Action: Action};
    return _elm.Router.values;
 };
@@ -14235,12 +14433,12 @@ Elm.Views.Login.make = function (_elm) {
       return function () {
          var updateResult = isAuthenticated ? $Router.Action(AuthIsSuccess) : function () {
             var validationErrors = model.validationErrors;
-            return $Router.Model(_U.replace([["password"
-                                             ,""]
-                                            ,["validationErrors"
-                                             ,_U.replace([["auth"
-                                                          ,_L.fromArray([$Localization.lc("Authentication failed")])]],
-                                             validationErrors)]],
+            return $Router.UpdatedModel(_U.replace([["password"
+                                                    ,""]
+                                                   ,["validationErrors"
+                                                    ,_U.replace([["auth"
+                                                                 ,_L.fromArray([$Localization.lc("Authentication failed")])]],
+                                                    validationErrors)]],
             model));
          }();
          return $Task.succeed(updateResult);
@@ -14265,14 +14463,14 @@ Elm.Views.Login.make = function (_elm) {
          model.password),
          resolveCheckResult(model)) : function () {
             var validationErrors = model.validationErrors;
-            return $Task.succeed($Router.Model(_U.replace([["password"
-                                                           ,""]
-                                                          ,["validationErrors"
-                                                           ,_U.replace([["login"
-                                                                        ,loginErrors]
-                                                                       ,["password"
-                                                                        ,passwordErrors]],
-                                                           validationErrors)]],
+            return $Task.succeed($Router.UpdatedModel(_U.replace([["password"
+                                                                  ,""]
+                                                                 ,["validationErrors"
+                                                                  ,_U.replace([["login"
+                                                                               ,loginErrors]
+                                                                              ,["password"
+                                                                               ,passwordErrors]],
+                                                                  validationErrors)]],
             model)));
          }();
       }();
@@ -14284,12 +14482,12 @@ Elm.Views.Login.make = function (_elm) {
          {case "Submit":
             return confirmLoginForm(modelBefore);
             case "UpdateLogin":
-            return $Task.succeed($Router.Model(_U.replace([["login"
-                                                           ,action._0]],
+            return $Task.succeed($Router.UpdatedModel(_U.replace([["login"
+                                                                  ,action._0]],
               modelBefore)));
             case "UpdatePassword":
-            return $Task.succeed($Router.Model(_U.replace([["password"
-                                                           ,action._0]],
+            return $Task.succeed($Router.UpdatedModel(_U.replace([["password"
+                                                                  ,action._0]],
               modelBefore)));}
          _U.badCase($moduleName,
          "between lines 70 and 73");
@@ -14300,10 +14498,7 @@ Elm.Views.Login.make = function (_elm) {
                              ,view: view
                              ,update: update
                              ,LoginFormModel: LoginFormModel
-                             ,AuthIsSuccess: AuthIsSuccess
-                             ,Submit: Submit
-                             ,UpdateLogin: UpdateLogin
-                             ,UpdatePassword: UpdatePassword};
+                             ,AuthIsSuccess: AuthIsSuccess};
    return _elm.Views.Login.values;
 };
 Elm.Views = Elm.Views || {};
