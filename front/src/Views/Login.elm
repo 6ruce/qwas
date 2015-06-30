@@ -37,8 +37,8 @@ type LoginAction
     | UpdatePassword String
 
 type alias LoginFormModel =
-    { login    : String
-    , password : String
+    { login            : String
+    , password         : String
     , validationErrors : ValidationErrors
     }
 
@@ -101,7 +101,7 @@ confirmLoginForm model =
            | otherwise ->
                 let validationErrors = model.validationErrors
                 in  Task.succeed <| UpdatedModel { model | password         <- ""
-                                                          , validationErrors <- { validationErrors | login    <- loginErrors
+                                                         , validationErrors <- { validationErrors | login    <- loginErrors
                                                                                                    , password <- passwordErrors } }
 
 checkAuthData : String -> String -> Task.Task Http.Error Bool
