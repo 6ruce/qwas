@@ -35,7 +35,7 @@ formatAppErrors appErrors =
     List.map (\ error ->
         case error of
             Application.NetworkError error -> "Http error: " ++ getNetworkErrorText error
-            _                  -> "Something gone wrong!")
+            _                              -> "Something gone wrong!")
         appErrors
 
 getNetworkErrorText : Http.Error -> String

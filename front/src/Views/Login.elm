@@ -9,6 +9,7 @@ module Views.Login
 
 import Signal
 import List
+import Maybe exposing (Maybe(..))
 
 import Html exposing (..)
 import Html.Attributes as Attr
@@ -49,9 +50,16 @@ type alias ValidationErrors =
     }
 
 emptyModel =
-    { login    = ""
-    , password = ""
-    , validationErrors = { login = [], password = [], auth = [] }
+    { login            = ""
+    , password         = ""
+    , validationErrors = emptyErrors
+    }
+
+emptyErrors : ValidationErrors
+emptyErrors =
+    { login    = []
+    , password = []
+    , auth     = []
     }
 
 image = "https://m1.behance.net/rendition/modules/34310785/disp/bf4dadf086f46af6d7331132e8ae9b02.jpg"
@@ -83,13 +91,15 @@ createLoginForm mailboxAddress model =
         isLoginValid    = List.isEmpty errors.login
         isPasswordValid = List.isEmpty errors.password
         sendAction      = sendLoginAction mailboxAddress
-    in
-        form [Attr.class "ui form segment"]
-            [ Fields.validationTextField (lc "Login")    model.login    [Fields.onInput (sendAction UpdateLogin)]    isLoginValid
-            , Fields.validationTextField (lc "Password") model.password [Fields.onInput (sendAction UpdatePassword)] isPasswordValid
-            , Fields.errorMessages       (List.concat [errors.login, errors.password, errors.auth])
-            , Buttons.simpleButton       (lc "Sign In") [Ev.onClick mailboxAddress Submit]
-            ]
+        formHtml        =
+            form [Attr.class "ui form attached segment"]
+                [ Fields.validationTextField (lc "Login")    model.login    [Fields.onInput (sendAction UpdateLogin)]    isLoginValid
+                , Fields.validationTextField (lc "Password") model.password [Fields.onInput (sendAction UpdatePassword)] isPasswordValid
+                , Buttons.simpleButton       (lc "Sign In") [Ev.onClick mailboxAddress Submit]
+                ]
+        errorsPanelHtml = Fields.formMessages (List.concat [errors.login, errors.password, errors.auth]) (Just "Form errors")
+    in div [] [formHtml, errorsPanelHtml]
+        
 
 confirmLoginForm : LoginFormModel -> UpdateTask LoginFormModel AuthIsSuccess
 confirmLoginForm model =
@@ -106,8 +116,8 @@ confirmLoginForm model =
 
 checkAuthData : String -> String -> Task.Task Http.Error Bool
 checkAuthData login password =
-    -- TODO: Post with credentials
-    Http.get (Response.resultDecoder <| Json.Decode.null "") "http://localhost:3000/auth"
+    let authUrl = "http://localhost:3000/auth/" ++ login ++ "/" ++ password
+    in Http.get (Response.resultDecoder <| Json.Decode.int) authUrl
         `andThen` (\result -> Task.succeed result.success)
 
 
@@ -116,7 +126,7 @@ resolveCheckResult model isAuthenticated =
     let updateResult =
         if | isAuthenticated -> Action AuthIsSuccess
            | otherwise       ->
-                let validationErrors = model.validationErrors
+                let validationErrors = { emptyErrors | auth <- [lc "Login or password is incorrect"] }
                 in  UpdatedModel { model | password         <- ""
-                                         , validationErrors <- { validationErrors | auth <- [lc "Authentication failed"] } }
+                                         , validationErrors <- validationErrors }
     in Task.succeed updateResult
