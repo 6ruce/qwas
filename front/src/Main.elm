@@ -13,9 +13,10 @@ import Maybe exposing (Maybe(..))
 import Application  exposing (ApplicationError(..))
 import Localization exposing (..)
 import Router       exposing (..)
+import Controller   exposing (Page(..))
 
 import Layouts.MainLayout as MainLayout
-import Views.Login        as LoginM exposing (LoginAction, LoginFormModel)
+import Views.Login        as LoginM exposing (LoginAction)
 import Views.MainPage     as MainPageM
 
 type Action
@@ -23,36 +24,27 @@ type Action
     | SignIn LoginAction
     | UpdateModel Model
 
-type Page
-    = Login
-    | MainPage
+
 
 -- Application state
 type Model =
     Model {
     -- General application state
       pageTitle     : String
-    , currentPage   : Page
     , updateTask    : Maybe (Task () Model)
-    , authenticated : Bool
     , errors        : List ApplicationError
 
-    -- Login page state
-    , loginForm : LoginFormModel
-
+    -- Modules state
+    , state : Controller.State
     }
 
 emptyModel : Model
 emptyModel =
     Model
         { pageTitle     = lc "Qwas"
-        , currentPage   = Login
         , updateTask    = Nothing
-        , authenticated = False
         , errors        = []
-
-        -- Modules empty models
-        , loginForm     = LoginM.emptyModel
+        , state         = Controller.emptyState
         }
 
 -- View Model Update
@@ -61,11 +53,9 @@ main = Signal.map view modelMailbox.signal
 
 view : Model -> Html
 view (Model model) =
-    let content =
-        case model.currentPage of
-            Login    -> LoginM.view model.loginForm loginAddress
-            MainPage -> MainPageM.view
-    in MainLayout.view model.errors content
+    let content = Controller.viewContent model.state loginAddress
+    in
+        MainLayout.view model.errors content
 
 model : Signal Model
 model =
@@ -75,21 +65,26 @@ update : Action -> Model -> Model
 update action (Model model) =
     case action of
         SignIn loginAction ->
-            let loginUpdateTask = LoginM.update loginAction model.loginForm
-                updateTask = loginUpdateTask
-                    `andThen` (\updateResult ->
-                        case updateResult of
-                            Action (LoginM.AuthIsSuccess) -> Task.succeed <| Model { model | authenticated <- True, currentPage <- MainPage }
-                            UpdatedModel loginModel       -> Task.succeed <| Model { model | loginForm     <- loginModel })
-                    `andThen` (\(Model updatedModel) -> Task.succeed <| Model { updatedModel | errors <- [] })
-                    `onError` (showHttpError <| Model model)
+            let updateTask = Controller.handleLogin loginAction model.state
+                `andThen` (setState <| Model model)
+                `andThen` cleanAppErrors
+                `onError` (showHttpError <| Model model)
             in Model { model | updateTask <- Just updateTask }
         UpdateModel (Model newModel) -> Model { newModel | updateTask <- Nothing }
         _                            -> Model model
 
+setState : Model -> Controller.State -> Task Http.Error Model
+setState (Model model) state =
+    Task.succeed <| Model { model | state <- state }
+
+-- Application error handling
 showHttpError : Model -> Http.Error -> Task () Model
 showHttpError (Model model) error =                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     
     Task.succeed <| Model { model | errors <- [NetworkError error] }
+
+cleanAppErrors : Model -> Task Http.Error Model
+cleanAppErrors (Model updatedModel) =
+    Task.succeed <| Model { updatedModel | errors <- [] }
 
 -- Mailboxes
 modelMailbox : Signal.Mailbox Model
@@ -102,9 +97,9 @@ loginAddress : Signal.Address LoginAction
 loginAddress =
     Signal.forwardTo mainMailbox.address SignIn
 
--- Ports
-getData : Model -> Task () (List ())
-getData (Model model) =
+-- Deviding model changing signal to two mailboxes
+sendModel : Model -> Task () (List ())
+sendModel (Model model) =
     case model.updateTask of
         Just task -> task
             `andThen` (\model -> Task.sequence [ Signal.send modelMailbox.address model
@@ -113,5 +108,5 @@ getData (Model model) =
 
 port httpTasks : Signal (Task () (List ()))
 port httpTasks =
-    Signal.map getData model
+    Signal.map sendModel model
 
