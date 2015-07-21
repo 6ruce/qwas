@@ -38,8 +38,8 @@ type LoginAction
     | UpdatePassword String
 
 type alias LoginFormModel =
-    { login    : String
-    , password : String
+    { login            : String
+    , password         : String
     , validationErrors : ValidationErrors
     }
 
