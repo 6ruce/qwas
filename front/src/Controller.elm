@@ -1,18 +1,21 @@
 module Controller
-    ( Page (..)
+    ( Action (..)
+    , Page (..)
     , State
     , emptyState
     , viewContent
-
-    , handleLogin
+    , handle
     ) where
 
-import Task exposing (Task, andThen)
+import Signal exposing (Address)
+import Task   exposing (Task, andThen)
 import Http
 
 import Router exposing (UpdateResult(..))
 import Views.Login    as LoginM exposing (LoginAction, LoginFormModel)
 import Views.MainPage as MainPageM
+
+type Action = SignIn LoginAction
 
 type Page
     = Login
@@ -33,10 +36,15 @@ emptyState =
     , loginForm     = LoginM.emptyModel
     }
 
-viewContent state loginAddress =
+viewContent state actionAddress =
     case state.currentPage of
-        Login    -> LoginM.view state.loginForm loginAddress
+        Login    -> LoginM.view state.loginForm (direcActionToAddress SignIn actionAddress)
         MainPage -> MainPageM.view
+
+handle : Action -> State -> Task Http.Error State
+handle action state =
+    case action of
+      SignIn loginAction -> handleLogin loginAction state
 
 handleLogin : LoginAction -> State -> Task Http.Error State
 handleLogin loginAction state =
@@ -46,3 +54,6 @@ handleLogin loginAction state =
                 case updateResult of
                     Action (LoginM.AuthIsSuccess) -> Task.succeed <| { state | authenticated <- True, currentPage <- MainPage }
                     UpdatedModel loginModel       -> Task.succeed <| { state | loginForm     <- loginModel })
+
+direcActionToAddress : (a -> Action) -> Address Action -> Address a
+direcActionToAddress action actionAddress = Signal.forwardTo actionAddress action

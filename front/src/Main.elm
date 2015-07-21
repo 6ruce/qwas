@@ -16,15 +16,11 @@ import Router       exposing (..)
 import Controller   exposing (Page(..))
 
 import Layouts.MainLayout as MainLayout
-import Views.Login        as LoginM exposing (LoginAction)
-import Views.MainPage     as MainPageM
 
 type Action
     = None
-    | SignIn LoginAction
+    | Application Controller.Action
     | UpdateModel Model
-
-
 
 -- Application state
 type Model =
@@ -53,7 +49,7 @@ main = Signal.map view modelMailbox.signal
 
 view : Model -> Html
 view (Model model) =
-    let content = Controller.viewContent model.state loginAddress
+    let content = Controller.viewContent model.state applicationActionAddress
     in
         MainLayout.view model.errors content
 
@@ -64,8 +60,8 @@ model =
 update : Action -> Model -> Model
 update action (Model model) =
     case action of
-        SignIn loginAction ->
-            let updateTask = Controller.handleLogin loginAction model.state
+        Application appAction ->
+            let updateTask = Controller.handle appAction model.state
                 `andThen` (setState <| Model model)
                 `andThen` cleanAppErrors
                 `onError` (showHttpError <| Model model)
@@ -93,11 +89,11 @@ modelMailbox = Signal.mailbox emptyModel
 mainMailbox : Signal.Mailbox Action
 mainMailbox = Signal.mailbox None
 
-loginAddress : Signal.Address LoginAction
-loginAddress =
-    Signal.forwardTo mainMailbox.address SignIn
+applicationActionAddress : Signal.Address Controller.Action
+applicationActionAddress =
+    Signal.forwardTo mainMailbox.address Application
 
--- Deviding model changing signal to two mailboxes
+-- Trigger model changing signal for two mailboxes
 sendModel : Model -> Task () (List ())
 sendModel (Model model) =
     case model.updateTask of

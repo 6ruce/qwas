@@ -107,16 +107,12 @@ confirmLoginForm model =
         passwordErrors    = Validate.toErrorList <| Validate.notEmpty (lc "Password is empty") model.password
         noErrors          = Tuple.all List.isEmpty (passwordErrors, loginErrors)
     in
-        if | noErrors  -> (cleanErrors model) `andThen` checkAuthData `andThen` (resolveCheckResult model)
+        if | noErrors  -> (checkAuthData model)`andThen` (resolveCheckResult model)
            | otherwise ->
                 let validationErrors = model.validationErrors
                 in  Task.succeed <| UpdatedModel { model | password         <- ""
                                                          , validationErrors <- { validationErrors | login    <- loginErrors
                                                                                                   , password <- passwordErrors } }
-
-cleanErrors : LoginFormModel -> Task.Task Http.Error LoginFormModel
-cleanErrors model =
-    Task.succeed <| { model | validationErrors <- emptyErrors}
 
 checkAuthData : LoginFormModel -> Task.Task Http.Error Bool
 checkAuthData model =
